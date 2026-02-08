@@ -47,54 +47,77 @@ class HomeScreen(BaseScreen):
 class UploadScreen(BaseScreen):
     def __init__(self, app):
         super().__init__(app)
-        self.selected_path = {"value": ""}
-        self.selected_file_name = Text("", size=20, color=app.subtext)
+        self.selected_path = ""
+        self.file_name = Text("", size=14, color=app.subtext)
+        self.process_btn = None
+
     def build(self):
-            fp = self._app.file_picker
-            fp.on_result = lambda e: (self.selected_file_name.__setattr__("value", e.files[0].name if e.files and 
-              len(e.files) > 0 else "No file selected"),self.selected_path.update({
-            "value": e.files[0].path if e.files and len(e.files) > 0 else ""
-        }),
-            self._page.update()
-    )
-            upload_box = Container(
-             height=220,
-             width=550,
-             border=border.all(3, self._app.accent),
-             border_radius=18,
-             bgcolor="#F3EEFF",
-             alignment=alignment.center,
-             on_click=lambda e: fp.pick_files(allow_multiple=False,allowed_extensions=["txt", "json"]),
-             content=Column(
-                 alignment="center",
-                 horizontal_alignment="center",
-                 spacing=10,
-                 controls=[
-                     Icon(Icons.CLOUD_UPLOAD, size=70, color=self._app.accent),
-                     Text("Click to upload your file", size=22, color=self._app.subtext),
-                 ],
-             ),
-             )
-            return Column(
+        path_input = TextField(
+            label="File path",
+            width=520,
+            hint_text=r"C:\path\to\requirements.txt",
+            border_color=self._app.accent,
+            focused_border_color=self._app.accent,
+            on_change=self._on_path_change,
+        )
+
+        self.process_btn = FilledButton(
+            "Process File",
+            width=180,
+            height=45,
+            bgcolor=self._app.accent,
+            color="white",
+            disabled=True,  
+            on_click=lambda e: self._app.process_file(
+                self._page, self.selected_path
+            ),
+        )
+
+        return Container(
+            expand=True,
+            alignment=Alignment.CENTER,
+            padding=40,
+            content=Column(
                 alignment="center",
                 horizontal_alignment="center",
-                spacing=30,
+                spacing=28,
                 controls=[
-                    Text("Upload Your File", size=32, weight=FontWeight.BOLD, color=self._app.accent),
-                    Row(                      
-                        alignment="center",
-                        controls=[upload_box]
+                    Text(
+                        "Process Your File",
+                        size=34,
+                        weight=FontWeight.BOLD,
+                        color=self._app.accent,
                     ),
-                    self.selected_file_name,
-                    FilledButton(
-                        "Process File",
-                        bgcolor=self._app.accent,
-                        color="white",
-                        on_click=lambda e: self._app.process_file(self._page, self.selected_path["value"])),
+
+                    path_input,
+
+                    self.file_name,
+
+                    self.process_btn,
+
                     OutlinedButton(
-                        "Back",style=ButtonStyle(color=self._app.accent),on_click=lambda e: self._app.show("home")),
+                        "Back",
+                        width=120,
+                        on_click=lambda e: self._app.show("home"),
+                    ),
                 ],
-            )
+            ),
+        )
+
+    def _on_path_change(self, e):
+        self.selected_path = e.control.value.strip()
+    
+        if self.selected_path:
+            file_only = self.selected_path.replace("\\", "/").split("/")[-1]
+            self.file_name.value = f"Selected file: {file_only}"
+            self.process_btn.disabled = False
+        else:
+            self.file_name.value = ""
+            self.process_btn.disabled = True
+    
+        self._page.update()
+
+)
 class ManualScreen(BaseScreen):
     def __init__(self, app):
         super().__init__(app)
@@ -249,9 +272,7 @@ class ZepixApp:
         page.title = "Zepix - Smart Dependency Manager"
         page.theme_mode = "light"
         page.bgcolor = self.bg
-        self.file_picker = FilePicker()
-        page.overlay.append(self.file_picker)
-    
+        
         self.show("home")
     def process_file(self, page: Page, filename):
         try:
@@ -327,5 +348,6 @@ def main(page: Page):
     app.start(page)
 
 
-app(target=main)
+run(main)
+
 
